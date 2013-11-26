@@ -482,7 +482,7 @@ if ($report_apache_fatals)
 		$error_count = $grep_out;
 	}
 
-	if ($error_count) {
+	if (defined $error_count) {
 		add_metric('ApacheFatalCount', 'None', $error_count);
 	}
 }

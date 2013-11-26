@@ -475,10 +475,11 @@ if ($report_apache_fatals)
 	my $grep_out = `logtail -o /tmp/error.log.offs -f /var/log/apache2/error.log | grep -cE 'STK FATAL|PHP Fatal error:'`;
 	my $error_count;
 
+	print ">> $grep_out <<\n" if $verbose;
 	VERIFY: {
 		last if $?;
-		last unless looks_like_number $grep_out;
 		chomp $grep_out;
+		last unless looks_like_number $grep_out;
 		$error_count = $grep_out;
 	}
 

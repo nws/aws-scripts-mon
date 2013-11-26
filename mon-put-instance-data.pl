@@ -460,7 +460,7 @@ if ($report_ntp_offset)
 
 	VERIFY: {
 		last if $?;
-		last unless $ntpdate_out =~ /adjust time server [\w.:]+ offset ([\d.]+) sec$/;
+		last unless $ntpdate_out =~ /adjust time server [\w.:]+ offset (\S+) sec$/;
 		last unless looks_like_number $1;
 		$offset = $1;
 	}

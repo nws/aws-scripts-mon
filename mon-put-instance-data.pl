@@ -472,7 +472,7 @@ if ($report_ntp_offset)
 
 if ($report_apache_fatals)
 {
-	my $grep_out = `logtail -f /var/log/apache2/error.log | grep -cE 'STK FATAL|PHP Fatal error:'`;
+	my $grep_out = `logtail -o /tmp/error.log.offs -f /var/log/apache2/error.log | grep -cE 'STK FATAL|PHP Fatal error:'`;
 	my $error_count;
 
 	VERIFY: {

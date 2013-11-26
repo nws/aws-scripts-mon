@@ -1,14 +1,14 @@
 # Copyright 2013 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License"). You may not 
-# use this file except in compliance with the License. A copy of the License 
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not
+# use this file except in compliance with the License. A copy of the License
 # is located at
 #
 #        http://aws.amazon.com/apache2.0/
 #
-# or in the "LICENSE" file accompanying this file. This file is distributed 
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either 
-# express or implied. See the License for the specific language governing 
+# or in the "LICENSE" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
 package CloudWatchClient;
@@ -17,7 +17,6 @@ use strict;
 use warnings;
 use base 'Exporter';
 our @EXPORT = qw();
-use Switch;
 use Digest::SHA qw(hmac_sha256_base64);
 use URI::Escape qw(uri_escape_utf8);
 use Compress::Zlib;
@@ -42,7 +41,7 @@ our $avail_zone;
 our $instance_id;
 our $image_id;
 our $instance_type;
-our $as_group_name; 	 
+our $as_group_name;
 our $meta_data_loc = '/var/tmp/aws-mon';
 
 #
@@ -53,7 +52,7 @@ sub get_meta_data
   my $resource = shift;
   my $use_cache = shift;
   my $data_value = read_meta_data($resource, $meta_data_ttl);
-  
+
   if (!defined($data_value) || length($data_value) == 0) {
     my $base_uri = 'http://169.254.169.254/latest/meta-data';
     $data_value = get $base_uri.$resource;
@@ -61,7 +60,7 @@ sub get_meta_data
       write_meta_data($resource, $data_value);
     }
   }
-  
+
   return $data_value;
 }
 
@@ -72,14 +71,14 @@ sub read_meta_data
 {
   my $resource = shift;
   my $default_ttl = shift;
-  
+
   my $location = $ENV{'AWS_EC2CW_META_DATA'};
-  if (!defined($location) || length($location) == 0) { 	 
-    $location = $meta_data_loc if ($meta_data_loc); 	 
+  if (!defined($location) || length($location) == 0) {
+    $location = $meta_data_loc if ($meta_data_loc);
   }
   my $meta_data_ttl = $ENV{'AWS_EC2CW_META_DATA_TTL'};
   $meta_data_ttl = $default_ttl if (!defined($meta_data_ttl));
-  
+
   my $data_value;
   if ($location)
   {
@@ -101,36 +100,36 @@ sub read_meta_data
       }
     }
   }
-  
+
   return $data_value;
 }
 
 #
-# Writes meta-data to the local filesystem. 	 
-# 	 
-sub write_meta_data 	 
-{ 	 
-  my $resource = shift; 	 
-  my $data_value = shift; 	 
-   
-  if ($resource && $data_value) 	 
-  { 	 
-    my $location = $ENV{'AWS_EC2CW_META_DATA'}; 	 
-    if (!defined($location) || length($location) == 0) { 	 
-      $location = $meta_data_loc if ($meta_data_loc); 	 
-    } 	 
+# Writes meta-data to the local filesystem.
+#
+sub write_meta_data
+{
+  my $resource = shift;
+  my $data_value = shift;
 
-    if ($location) 	 
-    { 	 
-      my $filename = $location.$resource; 	 
-      my $directory = dirname($filename); 	 
-      `/bin/mkdir -p $directory` unless -d $directory; 	 
+  if ($resource && $data_value)
+  {
+    my $location = $ENV{'AWS_EC2CW_META_DATA'};
+    if (!defined($location) || length($location) == 0) {
+      $location = $meta_data_loc if ($meta_data_loc);
+    }
 
-      open MDATA, ">$filename"; 	 
-      print MDATA $data_value; 	 
-      close MDATA; 	 
-    } 	 
-  } 	 
+    if ($location)
+    {
+      my $filename = $location.$resource;
+      my $directory = dirname($filename);
+      `/bin/mkdir -p $directory` unless -d $directory;
+
+      open MDATA, ">$filename";
+      print MDATA $data_value;
+      close MDATA;
+    }
+  }
 }
 
 #
@@ -139,11 +138,11 @@ sub write_meta_data
 sub get_ec2_endpoint
 {
   my $region = get_region();
-  
+
   if ($region) {
-    return "https://ec2.$region.amazonaws.com/"; 
+    return "https://ec2.$region.amazonaws.com/";
   }
-  
+
   return 'https://ec2.amazonaws.com/';
 }
 
@@ -159,7 +158,7 @@ sub get_auto_scaling_group
   # Try getting AS group name from the local cache and avoid calling EC2 API for
   # at least several hours. AS group name is not something that changes at all
   # but just in case if it changes at some point, read the value from the tag.
-  
+
   my $resource = '/as-group-name';
   $as_group_name = read_meta_data($resource, $meta_data_ttl);
   if ($as_group_name) {
@@ -167,7 +166,7 @@ sub get_auto_scaling_group
   }
 
   my $opts = shift;
-  
+
   my %ec2_opts = ();
   $ec2_opts{'aws-credential-file'} = $opts->{'aws-credential-file'};
   $ec2_opts{'aws-access-key-id'} = $opts->{'aws-access-key-id'};
@@ -180,16 +179,16 @@ sub get_auto_scaling_group
   $ec2_opts{'version'} = '2011-12-15';
   $ec2_opts{'url'} = get_ec2_endpoint();
   $ec2_opts{'aws-iam-role'} = $opts->{'aws-iam-role'};
-  
+
   my %ec2_params = ();
   $ec2_params{'Action'} = 'DescribeTags';
   $ec2_params{'Filter.1.Name'} = 'resource-id';
   $ec2_params{'Filter.1.Value.1'} = get_instance_id();
   $ec2_params{'Filter.2.Name'} = 'key';
   $ec2_params{'Filter.2.Value.1'} = 'aws:autoscaling:groupName';
-  
+
   my ($code, $reply) = call(\%ec2_params, \%ec2_opts);
-  
+
   if ($code == 200)
   {
     my $pattern = "<value>(.*?)<\/value>";
@@ -208,11 +207,11 @@ sub get_auto_scaling_group
     $reply =~ /$pattern/s;
     $reply = $1 if ($1);
   }
-  
+
   # In case when EC2 API call fails for whatever reason, keep using the older
   # value if it is present. Only ofter one day, assume this value is obsolete.
   # AS group name is not something that is changing on the fly anyway.
-  
+
   if (!$as_group_name)
   {
     # EC2 call failed, so try using older value for AS group name
@@ -289,11 +288,11 @@ sub get_region
 sub get_endpoint
 {
   my $region = get_region();
-  
+
   if ($region) {
     return "https://monitoring.$region.amazonaws.com/";
   }
-  
+
   return 'https://monitoring.amazonaws.com/';
 }
 
@@ -308,7 +307,7 @@ sub prepare_iam_role
   my $iam_role = $opts->{'aws-iam-role'};
   my $iam_dir = "/iam/security-credentials/";
 
-  # if am_role is not explicitly specified 
+  # if am_role is not explicitly specified
   if (!defined($iam_role)) {
     my $roles = get_meta_data($iam_dir, 0);
     my $nr_of_roles = $roles =~ tr/\n//;
@@ -320,7 +319,7 @@ sub prepare_iam_role
       # if only one role
       $iam_role = $roles;
     } else {
-      $roles =~ s/\n/, /g; # puts all the roles on one line 
+      $roles =~ s/\n/, /g; # puts all the roles on one line
       $roles =~ s/, $// ; # deletes the comma at the end
       return(0, "More than one IAM roles are associated with this EC2 instance: $roles.");
     }
@@ -346,23 +345,23 @@ sub prepare_iam_role
   my $key;
   my $token;
   while ($role_content =~ /(.*)\n/g ) {
-    
+
     my $line = $1;
     if ( $line =~ /"AccessKeyId"[ \t]*:[ \t]*"(.+)"/) {
       $id = $1;
       next;
     }
-  
+
     if ( $line =~ /"SecretAccessKey"[ \t]*:[ \t]*"(.+)"/) {
       $key = $1;
       next;
     }
-    
+
     if ( $line =~ /"Token"[ \t]*:[ \t]*"(.+)"/) {
       $token = $1;
       next;
     }
-    
+
   }
 
   my $role_statement = "from IAM role <$iam_role>";
@@ -373,7 +372,7 @@ sub prepare_iam_role
   } elsif (!defined($key)) {
     return(0, "Failed to parse AWS secret key $role_statement.");
   }
-  
+
   $opts->{'aws-access-key-id'} = $id;
   $opts->{'aws-secret-key'} = $key;
   $opts->{'aws-security-token'} = $token;
@@ -391,54 +390,55 @@ sub prepare_credentials
   my $aws_access_key_id = $opts->{'aws-access-key-id'};
   my $aws_secret_key = $opts->{'aws-secret-key'};
   my $aws_credential_file = $opts->{'aws-credential-file'};
-  
+
   if (defined($aws_access_key_id) && !$aws_access_key_id) {
     return(0, 'Provided empty AWS access key id.');
   }
   if (defined($aws_secret_key) && !$aws_secret_key) {
     return(0, 'Provided empty AWS secret key.');
-  }  
+  }
   if ($aws_access_key_id && $aws_secret_key) {
     return(1, '');
   }
-  
+
   if (!defined($aws_credential_file) || length($aws_credential_file) == 0) {
     my $env_creds_file = $ENV{'AWS_CREDENTIAL_FILE'};
     if (defined($env_creds_file) && length($env_creds_file) > 0) {
       $aws_credential_file = $env_creds_file;
     }
   }
-  
+
   if ($aws_credential_file)
   {
     my $file = $aws_credential_file;
     open(FILE, '<:utf8', $file) or return(0, "Failed to open AWS credentials file <$file>");
     print_out("Using AWS credentials file <$aws_credential_file>", $outfile) if $verbose;
-    
+
     while (my $line = <FILE>)
     {
       $line =~ /^$/ and next; # skip empty lines
       $line =~ /^#.*/ and next; # skip commented lines
       $line =~ /^\s*(.*?)=(.*?)\s*$/ or return(0, "Failed to parse AWS credential entry '$line' in <$file>.");
       my ($key, $value) = ($1, $2);
-      switch ($key)
-      {
-        case 'AWSAccessKeyId' { $aws_access_key_id = $value; }
-        case 'AWSSecretKey'   { $aws_secret_key = $value; }
-      }
+	  if ($key eq 'AWSAccessKeyId') {
+		  $aws_access_key_id = $value;
+	  }
+	  elsif ($key eq 'AWSSecretKey') {
+		  $aws_secret_key = $value;
+	  }
     }
     close (FILE);
 
     $opts->{'aws-access-key-id'} = $aws_access_key_id;
     $opts->{'aws-secret-key'} = $aws_secret_key;
   }
-  
+
   if (!$aws_access_key_id || !$aws_secret_key) {
     # if all the credential methods failed, try iam_role
     # either the default or user specified IAM role
     return prepare_iam_role($opts);
   }
-  
+
   return (1, '');
 }
 
@@ -459,7 +459,7 @@ sub print_out
 {
   my $text = shift;
   my $filename = shift;
-  
+
   if ($filename)
   {
     open OUT_STREAM, ">>$filename";
@@ -479,17 +479,17 @@ sub build_payload
 {
   my $params = shift;
   my $opts = shift;
-  
+
   $params->{'AWSAccessKeyId'} = $opts->{'aws-access-key-id'};
   $params->{'Timestamp'} = get_timestamp(time());
   $params->{'SignatureMethod'}  = 'HmacSHA256';
   $params->{'SignatureVersion'} = '2';
-  
+
   # if working with an IAM role, include the Security Token
   if($opts->{'aws-security-token'}) {
     $params->{'SecurityToken'} = $opts->{'aws-security-token'};
   }
-  
+
   my $endpoint = $opts->{'url'};
   my $endpoint_name = $endpoint;
   if ( !($endpoint_name =~ s!^https?://(.*?)/?$!$1!) ) {
@@ -507,17 +507,17 @@ sub build_payload
   my @args = ();
   for my $key (sort keys %{$params}) {
     my $value = $params->{$key};
-    my ($ekey, $evalue) = (uri_escape_utf8($key, $unsafe_characters), 
+    my ($ekey, $evalue) = (uri_escape_utf8($key, $unsafe_characters),
       uri_escape_utf8($value, $unsafe_characters));
     push @args, "$ekey=$evalue";
   }
-  
+
   my $query_string = join '&', @args;
   $sign_data .= $query_string;
-  
+
   my $signature = hmac_sha256_base64($sign_data, $opts->{'aws-secret-key'}).'=';
   my $payload = $query_string.'&Signature='.uri_escape_utf8($signature);
-  
+
   return (1, $payload);
 }
 
@@ -528,7 +528,7 @@ sub call
 {
   my $params = shift;
   my $opts = shift;
-  
+
   my $endpoint;
   if (defined($opts->{'url'})) {
     $endpoint = $opts->{'url'};
@@ -537,12 +537,12 @@ sub call
     $endpoint = get_endpoint();
     $opts->{'url'} = $endpoint;
   }
-  
+
   if (!defined($opts->{'version'})) {
     $opts->{'version'} = $service_version;
   }
   $params->{'Version'} = $opts->{'version'};
-  
+
   my $user_agent_string = "CloudWatch-Scripting/$client_version";
   if (defined($opts->{'user-agent'})) {
     $user_agent_string = $opts->{'user-agent'};
@@ -551,56 +551,56 @@ sub call
   my $res_code;
   my $res_msg;
   my $payload;
-  
+
   ($res_code, $res_msg) = prepare_credentials($opts);
-  
+
   if ($res_code == 0) {
     return ($res_code, $res_msg);
   }
-  
+
   ($res_code, $payload) = build_payload($params, $opts);
-  
+
   if ($res_code == 0) {
     return ($res_code, $payload);
   }
-  
+
   my $user_agent = new LWP::UserAgent(agent => $user_agent_string);
   $user_agent->timeout($http_request_timeout);
   my $request = new HTTP::Request 'POST', $endpoint;
-  
+
   $request->content_type('application/x-www-form-urlencoded');
   $request->content($payload);
-  
+
   if (defined($opts->{'enable-compression'}) && length($payload) > $compress_threshold_bytes) {
     $request->encode('gzip');
   }
-  
+
   my $response;
   my $keep_trying = 1;
   my $call_attempts = 1;
   my $verbose = $opts->{'verbose'};
   my $outfile = $opts->{'output-file'};
-  
+
   print_out("Endpoint: $endpoint", $outfile) if $verbose;
   print_out("Payload: $payload", $outfile) if $verbose;
-  
+
   # initial and max delay in seconds between retries
-  my $delay = 4; 
+  my $delay = 4;
   my $max_delay = 16;
-  
+
   if (defined($opts->{'retries'})) {
     $call_attempts += $opts->{'retries'};
-  }  
+  }
   if (defined($opts->{'max-backoff-sec'})) {
     $max_delay = $opts->{'max-backoff-sec'};
   }
 
   my $response_code = 0;
-  
+
   if ($opts->{'verify'}) {
     return (200, 'This is a verification run, not an actual response.');
   }
-  
+
   for (my $i = 0; $i < $call_attempts && $keep_trying; ++$i)
   {
     my $attempt = $i + 1;
@@ -630,7 +630,7 @@ sub call
       $delay = $incdelay > $max_delay ? $max_delay : $incdelay;
     }
   }
-  
+
   my $response_content = $response->content;
   print_out($response_content, $outfile) if ($verbose && $response_code == 200);
 

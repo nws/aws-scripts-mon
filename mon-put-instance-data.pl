@@ -32,6 +32,7 @@ Description of available options:
   --disk-space-used   Reports allocated disk space in gigabytes.
   --disk-space-avail  Reports available disk space in gigabytes.
   --ntp-offset        Reports ntp offset in seconds.
+  --apache-fatals     Reports count of fatal errors in apache error log.
 
   --aggregated[=only]    Adds aggregated metrics for instance type, AMI id, and overall.
   --auto-scaling[=only]  Adds aggregated metrics for Auto Scaling group.
@@ -93,7 +94,7 @@ use constant
 	GIGA => 1073741824,
 };
 
-my $version = '1.1.1-nws';
+my $version = '1.1.2-nws';
 my $client_name = 'CloudWatch-PutInstanceData';
 
 my $mcount = 0;
@@ -106,6 +107,7 @@ my $report_disk_util;
 my $report_disk_used;
 my $report_disk_avail;
 my $report_ntp_offset;
+my $report_apache_fatals;
 my $mem_used_incl_cache_buff;
 my @mount_path;
 my $mem_units;
@@ -145,6 +147,7 @@ my $argv_size = @ARGV;
 		'disk-space-used' => \$report_disk_used,
 		'disk-space-avail' => \$report_disk_avail,
 		'ntp-offset' => \$report_ntp_offset,
+		'apache-fatals' => \$report_apache_fatals,
 		'auto-scaling:s' => \$auto_scaling,
 		'aggregated:s' => \$aggregated,
 		'memory-units:s' => \$mem_units,
@@ -283,7 +286,8 @@ if (!$report_disk_space && ($report_disk_util || $report_disk_used || $report_di
 
 # check that there is a need to monitor at least something
 if (!$report_mem_util && !$report_mem_used && !$report_mem_avail
-	&& !$report_swap_util && !$report_swap_used && !$report_disk_space && !$report_ntp_offset)
+	&& !$report_swap_util && !$report_swap_used && !$report_disk_space
+	&& !$report_ntp_offset && !$report_apache_fatals)
 {
 	exit_with_error("No metrics specified for collection and submission to CloudWatch.");
 }
@@ -454,7 +458,7 @@ if ($report_ntp_offset)
 	my $ntpdate_out = (`/usr/sbin/ntpdate -q pool.ntp.org`)[-1];
 	my $offset;
 
-	OFFSET: {
+	VERIFY: {
 		last if $?;
 		last unless $ntpdate_out =~ /adjust time server [\w.:]+ offset ([\d.]+) sec$/;
 		last unless looks_like_number $1;
@@ -463,6 +467,23 @@ if ($report_ntp_offset)
 
 	if ($offset) {
 		add_metric('NTPOffset', 'Seconds', $offset);
+	}
+}
+
+if ($report_apache_fatals)
+{
+	my $grep_out = `logtail -f /var/log/apache2/error.log | grep -cE 'STK FATAL|PHP Fatal error:'`;
+	my $error_count;
+
+	VERIFY: {
+		last if $?;
+		last unless looks_like_number $grep_out;
+		chomp $grep_out;
+		$error_count = $grep_out;
+	}
+
+	if ($error_count) {
+		add_metric('ApacheFatalCount', 'None', $error_count);
 	}
 }
 

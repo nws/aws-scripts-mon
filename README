@@ -1,0 +1,5 @@
+to crontab:
+
+*/5  * * * *	/path/to/mon-put-instance-data.pl --aws-credential-file=/path/to/awscreds --from-cron  --mem-util --mem-used --mem-avail --swap-util --swap-used --disk-path=/ --disk-space-util --disk-space-used --disk-space-avail
+
+

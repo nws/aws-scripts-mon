@@ -477,7 +477,7 @@ if ($report_apache_fatals)
 
 	VERIFY: {
 		my $ec = $? >> 8;
-		last if $ec == 0 || $ec == 1;
+		last unless $ec == 0 || $ec == 1;
 		chomp $grep_out;
 		last unless looks_like_number $grep_out;
 		$error_count = $grep_out;

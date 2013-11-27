@@ -467,6 +467,7 @@ if ($report_ntp_offset)
 
 	if (defined $offset) {
 		add_metric('NTPOffset', 'Seconds', $offset);
+		add_metric('NTPAbsOffset', 'Seconds', abs $offset);
 	}
 }
 
